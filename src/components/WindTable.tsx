@@ -6,6 +6,8 @@ import { WindCell } from "./WindCell";
 interface WindTableProps {
   forecasts: ModelForecast[];
   isLoading: boolean;
+  selectedHour: string | null;
+  onSelectHour: (time: string) => void;
 }
 
 function getMasterTimeline(forecasts: ModelForecast[]): string[] {
@@ -24,9 +26,13 @@ function buildTimeIndex(times: string[]): Map<string, number> {
   return map;
 }
 
-export function WindTable({ forecasts, isLoading }: WindTableProps) {
+export function WindTable({
+  forecasts,
+  isLoading,
+  selectedHour,
+  onSelectHour,
+}: WindTableProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
-
   const masterTimeline = getMasterTimeline(forecasts);
 
   useEffect(() => {
@@ -35,22 +41,22 @@ export function WindTable({ forecasts, isLoading }: WindTableProps) {
     const nowHour = now.toISOString().slice(0, 13);
     const idx = masterTimeline.findIndex((t) => t.startsWith(nowHour));
     if (idx > 0) {
-      const cellWidth = 20;
+      const cellWidth = 28;
       scrollRef.current.scrollLeft = Math.max(0, idx * cellWidth - 60);
     }
   }, [masterTimeline]);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-40">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-600 border-t-white" />
+      <div className="flex items-center justify-center h-20">
+        <div className="animate-spin rounded-full h-6 w-6 border-2 border-gray-600 border-t-white" />
       </div>
     );
   }
 
   if (forecasts.length === 0) {
     return (
-      <div className="text-gray-500 text-center py-12 text-sm">
+      <div className="text-gray-500 text-center py-6 text-sm">
         Aucune donnee disponible
       </div>
     );
@@ -60,15 +66,23 @@ export function WindTable({ forecasts, isLoading }: WindTableProps) {
     <div ref={scrollRef} className="overflow-x-auto -mx-3">
       <table className="border-collapse">
         <thead>
-          <TimelineHeader times={masterTimeline} />
+          <TimelineHeader
+            times={masterTimeline}
+            selectedHour={selectedHour}
+            onSelectHour={onSelectHour}
+            forecasts={forecasts}
+          />
         </thead>
         <tbody>
           {forecasts.map((forecast) => {
             const timeIndex = buildTimeIndex(forecast.hourly.time);
             return (
               <tr key={forecast.modelName}>
-                <td className="sticky left-0 z-10 bg-gray-900 px-1 py-0 text-[8px] font-semibold text-gray-300 whitespace-nowrap border-r border-gray-700">
-                  {forecast.modelName}
+                <td className="sticky left-0 z-10 bg-gray-900 px-1 py-0 whitespace-nowrap border-r border-gray-700">
+                  <div className="flex flex-col items-center leading-tight">
+                    <span className="text-[8px] font-bold text-gray-200">kn</span>
+                    <span className="text-[7px] text-gray-400">{forecast.modelName}</span>
+                  </div>
                 </td>
                 {masterTimeline.map((t, i) => {
                   const idx = timeIndex.get(t);
@@ -86,6 +100,8 @@ export function WindTable({ forecasts, isLoading }: WindTableProps) {
                       speed={speed}
                       gusts={gusts}
                       direction={direction}
+                      selected={t === selectedHour}
+                      onSelect={() => onSelectHour(t)}
                     />
                   );
                 })}

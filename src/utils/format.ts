@@ -2,12 +2,12 @@ const DAYS_FR = ["DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM"];
 
 export function formatHour(iso: string): string {
   const d = new Date(iso);
-  return String(d.getHours()).padStart(2, "0");
+  return String(d.getHours());
 }
 
 export function formatDayHeader(iso: string): string {
   const d = new Date(iso);
-  return `${DAYS_FR[d.getDay()]} ${d.getDate()}`;
+  return `${DAYS_FR[d.getDay()]}. ${d.getDate()}`;
 }
 
 export function groupHoursByDay(times: string[]): Map<string, number[]> {

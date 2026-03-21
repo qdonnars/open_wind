@@ -19,11 +19,13 @@ function App() {
   const [spot, setSpot] = useState<Spot>(DEFAULT_SPOT);
   const [forecasts, setForecasts] = useState<ModelForecast[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedHour, setSelectedHour] = useState<string | null>(null);
   const { customSpots, addSpot, removeSpot, isCustom } = useCustomSpots();
 
   useEffect(() => {
     let cancelled = false;
     setIsLoading(true);
+    setSelectedHour(null);
     fetchAllModels(spot.latitude, spot.longitude).then((data) => {
       if (!cancelled) {
         setForecasts(data);
@@ -53,11 +55,18 @@ function App() {
           current={spot}
           customSpots={customSpots}
           onSelectSpot={setSpot}
+          forecasts={forecasts}
+          selectedHour={selectedHour}
         />
       </div>
 
       <div className="shrink-0">
-        <WindTable forecasts={forecasts} isLoading={isLoading} />
+        <WindTable
+          forecasts={forecasts}
+          isLoading={isLoading}
+          selectedHour={selectedHour}
+          onSelectHour={setSelectedHour}
+        />
         <footer className="text-center text-gray-600 text-[10px] py-1 border-t border-gray-800">
           <a
             href="https://open-meteo.com/"
