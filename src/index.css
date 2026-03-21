@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+.spot-tooltip {
+  background: #1f2937;
+  color: #fff;
+  border: 1px solid #374151;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+.spot-tooltip::before {
+  border-top-color: #374151;
+}
