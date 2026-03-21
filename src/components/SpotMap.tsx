@@ -99,7 +99,7 @@ export function SpotMap({ current, customSpots, onSelectSpot }: SpotMapProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-48 sm:h-64 rounded-lg overflow-hidden border border-gray-800"
+      className="w-full h-full overflow-hidden"
     />
   );
 }

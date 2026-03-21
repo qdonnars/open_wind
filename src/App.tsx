@@ -39,7 +39,7 @@ function App() {
   const isSaved = isCustom(spot);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="h-screen flex flex-col bg-gray-950 text-white overflow-hidden">
       <Header
         onSelectSpot={setSpot}
         canSave={canSave}
@@ -48,27 +48,28 @@ function App() {
         onRemove={() => removeSpot(spot)}
       />
 
-      <main className="px-3 py-2 space-y-2">
+      <div className="flex-1 min-h-0">
         <SpotMap
           current={spot}
           customSpots={customSpots}
           onSelectSpot={setSpot}
         />
+      </div>
 
+      <div className="shrink-0">
         <WindTable forecasts={forecasts} isLoading={isLoading} />
-      </main>
-
-      <footer className="text-center text-gray-600 text-[10px] py-2 border-t border-gray-800">
-        <a
-          href="https://open-meteo.com/"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline hover:text-gray-400"
-        >
-          Open-Meteo.com
-        </a>{" "}
-        (CC BY 4.0)
-      </footer>
+        <footer className="text-center text-gray-600 text-[10px] py-1 border-t border-gray-800">
+          <a
+            href="https://open-meteo.com/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-gray-400"
+          >
+            Open-Meteo.com
+          </a>{" "}
+          (CC BY 4.0)
+        </footer>
+      </div>
     </div>
   );
 }

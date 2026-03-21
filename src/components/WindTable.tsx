@@ -35,8 +35,8 @@ export function WindTable({ forecasts, isLoading }: WindTableProps) {
     const nowHour = now.toISOString().slice(0, 13);
     const idx = masterTimeline.findIndex((t) => t.startsWith(nowHour));
     if (idx > 0) {
-      const cellWidth = 40;
-      scrollRef.current.scrollLeft = Math.max(0, idx * cellWidth - 80);
+      const cellWidth = 20;
+      scrollRef.current.scrollLeft = Math.max(0, idx * cellWidth - 60);
     }
   }, [masterTimeline]);
 
@@ -67,7 +67,7 @@ export function WindTable({ forecasts, isLoading }: WindTableProps) {
             const timeIndex = buildTimeIndex(forecast.hourly.time);
             return (
               <tr key={forecast.modelName}>
-                <td className="sticky left-0 z-10 bg-gray-900 px-1.5 py-0.5 text-[10px] font-semibold text-gray-300 whitespace-nowrap border-r border-gray-700">
+                <td className="sticky left-0 z-10 bg-gray-900 px-1 py-0 text-[8px] font-semibold text-gray-300 whitespace-nowrap border-r border-gray-700">
                   {forecast.modelName}
                 </td>
                 {masterTimeline.map((t, i) => {

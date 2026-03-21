@@ -66,7 +66,7 @@ export function SpotSearch({ onSelect }: SpotSearchProps) {
         className="w-full px-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-gray-500"
       />
       {open && (
-        <ul className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden z-20 shadow-lg">
+        <ul className="absolute top-full left-0 right-0 mt-1 bg-gray-800 border border-gray-700 rounded-lg overflow-hidden z-50 shadow-lg">
           {results.map((r) => (
             <li
               key={r.id}

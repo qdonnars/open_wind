@@ -10,7 +10,7 @@ interface WindCellProps {
 export function WindCell({ speed, gusts, direction }: WindCellProps) {
   if (speed == null) {
     return (
-      <td className="min-w-[40px] h-12 bg-gray-800/50 border border-gray-800 text-center text-gray-600 text-[10px] align-middle">
+      <td className="min-w-[20px] h-7 bg-gray-800/50 border border-gray-800 text-center text-gray-600 text-[7px] align-middle">
         -
       </td>
     );
@@ -21,14 +21,14 @@ export function WindCell({ speed, gusts, direction }: WindCellProps) {
 
   return (
     <td
-      className="min-w-[40px] h-12 border border-gray-800/30 text-center align-middle"
+      className="min-w-[20px] h-7 border border-gray-800/30 text-center align-middle p-0"
       style={{ backgroundColor: bg, color }}
     >
-      <div className="flex flex-col items-center leading-none gap-px">
+      <div className="flex flex-col items-center leading-none">
         {direction != null && <WindArrow degrees={direction} />}
-        <span className="text-[11px] font-bold">{Math.round(speed)}</span>
+        <span className="text-[8px] font-bold">{Math.round(speed)}</span>
         {gusts != null && (
-          <span className="text-[9px] opacity-60">{Math.round(gusts)}</span>
+          <span className="text-[6px] opacity-60">{Math.round(gusts)}</span>
         )}
       </div>
     </td>
