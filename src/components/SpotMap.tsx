@@ -120,44 +120,39 @@ export function SpotMap({
 
     mapRef.current = map;
 
-    // Long press detection (800ms)
+    // Long press detection via Pointer Events (covers mouse + touch, one event stream)
+    const el = containerRef.current!;
     let pressTimer: ReturnType<typeof setTimeout> | null = null;
-    let pressLatLng: L.LatLng | null = null;
+    let startX = 0;
+    let startY = 0;
 
     const cancelPress = () => {
       if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; }
     };
 
-    map.on("mousedown", (e: L.LeafletMouseEvent) => {
-      if (e.originalEvent.button !== 0) return;
-      pressLatLng = e.latlng;
+    const handlePointerDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      startX = e.clientX;
+      startY = e.clientY;
       pressTimer = setTimeout(async () => {
-        if (!pressLatLng) return;
-        const { lat, lng } = pressLatLng;
-        const name = await reverseGeocode(lat, lng);
-        setPendingRef.current({ lat, lng, name });
-      }, 800);
-    });
-    map.on("mouseup mousemove", cancelPress);
-
-    // Touch long press
-    const el = containerRef.current!;
-    const handleTouchStart = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      const rect = el.getBoundingClientRect();
-      const point = L.point(touch.clientX - rect.left, touch.clientY - rect.top);
-      pressLatLng = map.containerPointToLatLng(point);
-      pressTimer = setTimeout(async () => {
-        if (!pressLatLng) return;
-        const { lat, lng } = pressLatLng;
-        const name = await reverseGeocode(lat, lng);
-        setPendingRef.current({ lat, lng, name });
+        const rect = el.getBoundingClientRect();
+        const point = L.point(startX - rect.left, startY - rect.top);
+        const latlng = map.containerPointToLatLng(point);
+        const name = await reverseGeocode(latlng.lat, latlng.lng);
+        setPendingRef.current({ lat: latlng.lat, lng: latlng.lng, name });
       }, 800);
     };
-    const handleTouchCancel = () => cancelPress();
-    el.addEventListener("touchstart", handleTouchStart, { passive: true });
-    el.addEventListener("touchend", handleTouchCancel);
-    el.addEventListener("touchmove", handleTouchCancel, { passive: true });
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (Math.abs(e.clientX - startX) > 10 || Math.abs(e.clientY - startY) > 10) {
+        cancelPress();
+      }
+    };
+
+    el.addEventListener("pointerdown", handlePointerDown);
+    el.addEventListener("pointermove", handlePointerMove);
+    el.addEventListener("pointerup", cancelPress);
+    el.addEventListener("pointercancel", cancelPress);
 
     // Create initial markers immediately + fix size after layout
     for (const spot of [...QUICK_SPOTS, ...customSpots]) {
@@ -187,9 +182,10 @@ export function SpotMap({
 
     return () => {
       cancelPress();
-      el.removeEventListener("touchstart", handleTouchStart);
-      el.removeEventListener("touchend", handleTouchCancel);
-      el.removeEventListener("touchmove", handleTouchCancel);
+      el.removeEventListener("pointerdown", handlePointerDown);
+      el.removeEventListener("pointermove", handlePointerMove);
+      el.removeEventListener("pointerup", cancelPress);
+      el.removeEventListener("pointercancel", cancelPress);
       map.remove();
       mapRef.current = null;
     };

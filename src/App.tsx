@@ -7,7 +7,8 @@ import { WindTable } from "./components/WindTable";
 import { SpotMap } from "./components/SpotMap";
 
 function App() {
-  const [spot, setSpot] = useState<Spot | null>(null);
+  const FRIOUL: Spot = { name: "Îles du Frioul", latitude: 43.2795, longitude: 5.2995 };
+  const [spot, setSpot] = useState<Spot | null>(FRIOUL);
   const [forecasts, setForecasts] = useState<ModelForecast[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedHour, setSelectedHour] = useState<string | null>(null);
@@ -32,8 +33,8 @@ function App() {
   const canSave = spot != null && !isCustom(spot);
   const isSaved = spot != null && isCustom(spot);
 
-  // Default map center: Marseille area
-  const mapCenter: Spot = spot ?? { name: "", latitude: 43.2, longitude: 5.7 };
+  // Default map center: Frioul / rade de Marseille
+  const mapCenter: Spot = spot ?? { name: "", latitude: 43.28, longitude: 5.3 };
 
   return (
     <div className="h-screen flex flex-col bg-gray-950 text-white overflow-hidden">
@@ -65,7 +66,7 @@ function App() {
             onSelectHour={setSelectedHour}
           />
         ) : (
-          <div className="text-gray-500 text-center py-4 text-sm">
+          <div className="text-gray-500 text-center py-4 text-sm px-6 whitespace-normal">
             Appuie longuement sur la carte pour ajouter un spot
           </div>
         )}
