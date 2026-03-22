@@ -67,123 +67,128 @@ function drawIcon(size) {
   function setPixel(x, y, r, g, b, a = 255) {
     if (x < 0 || x >= S || y < 0 || y >= S) return;
     const i = (y * S + x) * 4;
-    rgba[i] = r; rgba[i + 1] = g; rgba[i + 2] = b; rgba[i + 3] = a;
+    // alpha blend over existing
+    const ai = a / 255;
+    rgba[i]     = Math.round(r * ai + rgba[i]     * (1 - ai));
+    rgba[i + 1] = Math.round(g * ai + rgba[i + 1] * (1 - ai));
+    rgba[i + 2] = Math.round(b * ai + rgba[i + 2] * (1 - ai));
+    rgba[i + 3] = Math.min(255, rgba[i + 3] + a);
   }
 
-  // Anti-aliased circle fill helper
   function fillCircleAA(cx, cy, radius, r, g, b) {
     for (let y = Math.floor(cy - radius - 1); y <= Math.ceil(cy + radius + 1); y++) {
       for (let x = Math.floor(cx - radius - 1); x <= Math.ceil(cx + radius + 1); x++) {
         const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
         const alpha = Math.max(0, Math.min(1, radius + 0.5 - dist));
-        if (alpha > 0) {
-          const idx = (y * S + x) * 4;
-          if (x >= 0 && x < S && y >= 0 && y < S) {
-            rgba[idx] = r; rgba[idx+1] = g; rgba[idx+2] = b;
-            rgba[idx+3] = Math.round(alpha * 255);
-          }
-        }
+        if (alpha > 0) setPixel(x, y, r, g, b, Math.round(alpha * 255));
       }
     }
   }
 
-  // Draw line with thickness (anti-aliased)
-  function drawLine(x0, y0, x1, y1, thick, r, g, b) {
-    const dx = x1 - x0, dy = y1 - y0;
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const steps = Math.ceil(len * 2);
-    for (let s = 0; s <= steps; s++) {
-      const t = s / steps;
-      const px = x0 + dx * t;
-      const py = y0 + dy * t;
-      fillCircleAA(px, py, thick / 2, r, g, b);
+  function drawThickCurve(pts, thick, r, g, b) {
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i], [x1, y1] = pts[i + 1];
+      const steps = Math.ceil(Math.sqrt((x1-x0)**2 + (y1-y0)**2) * 2);
+      for (let s = 0; s <= steps; s++) {
+        const t = s / steps;
+        fillCircleAA(x0 + (x1-x0)*t, y0 + (y1-y0)*t, thick/2, r, g, b);
+      }
     }
   }
 
-  // Fill polygon (scanline)
   function fillPolygon(pts, r, g, b) {
     const minY = Math.floor(Math.min(...pts.map(p => p[1])));
     const maxY = Math.ceil(Math.max(...pts.map(p => p[1])));
     for (let y = minY; y <= maxY; y++) {
       const xs = [];
       for (let i = 0; i < pts.length; i++) {
-        const [ax, ay] = pts[i];
-        const [bx, by] = pts[(i + 1) % pts.length];
-        if ((ay <= y && by > y) || (by <= y && ay > y)) {
+        const [ax, ay] = pts[i], [bx, by] = pts[(i+1) % pts.length];
+        if ((ay <= y && by > y) || (by <= y && ay > y))
           xs.push(ax + (y - ay) / (by - ay) * (bx - ax));
-        }
       }
       xs.sort((a, b) => a - b);
-      for (let k = 0; k < xs.length - 1; k += 2) {
-        for (let x = Math.floor(xs[k]); x <= Math.ceil(xs[k + 1]); x++) {
+      for (let k = 0; k < xs.length - 1; k += 2)
+        for (let x = Math.floor(xs[k]); x <= Math.ceil(xs[k+1]); x++)
           setPixel(x, y, r, g, b);
-        }
-      }
     }
   }
 
   const sc = S / 512;
 
-  // Background: rounded square, dark navy
-  const bg = [15, 30, 60];
+  // Background: dark navy
   for (let y = 0; y < S; y++)
-    for (let x = 0; x < S; x++)
-      setPixel(x, y, bg[0], bg[1], bg[2]);
+    for (let x = 0; x < S; x++) {
+      const i = (y * S + x) * 4;
+      rgba[i] = 12; rgba[i+1] = 25; rgba[i+2] = 55; rgba[i+3] = 255;
+    }
 
-  // Rounded corners (radius ~80px at 512)
-  const cr = 80 * sc;
+  // Rounded corners
+  const cr = 90 * sc;
   for (let y = 0; y < S; y++) {
     for (let x = 0; x < S; x++) {
-      const dx = Math.max(0, Math.max(cr - x, x - (S - 1 - cr)));
-      const dy = Math.max(0, Math.max(cr - y, y - (S - 1 - cr)));
-      if (dx * dx + dy * dy > cr * cr) {
-        const i = (y * S + x) * 4;
-        rgba[i + 3] = 0; // transparent corner
-      }
+      const dx = Math.max(0, Math.max(cr - x, x - (S-1-cr)));
+      const dy = Math.max(0, Math.max(cr - y, y - (S-1-cr)));
+      if (dx*dx + dy*dy > cr*cr) { const i=(y*S+x)*4; rgba[i+3]=0; }
     }
   }
 
-  // Mast: vertical line
-  const mastX = 0.42 * S;
-  const mastTop = 0.12 * S;
-  const mastBot = 0.82 * S;
-  drawLine(mastX, mastTop, mastX, mastBot, 10 * sc, 255, 255, 255);
+  // ── WING (wingfoil) ──────────────────────────────────────────────
+  // Viewed from front: wide crescent shape
+  // Leading edge = thick inflatable tube arcing upward
+  // Wing body tapers toward each tip
 
-  // Main sail (triangle): mast top → mast bottom → right
-  const sailPts = [
-    [mastX, mastTop],
-    [mastX, mastBot * 0.78],
-    [0.80 * S, mastBot * 0.78],
-  ];
-  fillPolygon(sailPts, 255, 255, 255);
+  const cx = S * 0.5;
+  const wingCY = S * 0.38; // vertical center of wing
 
-  // Jib (smaller triangle): mast top → mast mid → left
-  const jibPts = [
-    [mastX, mastTop + 0.06 * S],
-    [mastX, mastBot * 0.55],
-    [0.20 * S, mastBot * 0.72],
-  ];
-  fillPolygon(jibPts, 200, 225, 255);
-
-  // Hull
-  const hullPts = [
-    [0.22 * S, mastBot],
-    [0.78 * S, mastBot],
-    [0.68 * S, mastBot + 0.08 * S],
-    [0.32 * S, mastBot + 0.08 * S],
-  ];
-  fillPolygon(hullPts, 255, 255, 255);
-
-  // Water line (two wavy lines)
-  const wy = mastBot + 0.14 * S;
-  for (let x = 0.05 * S; x < 0.95 * S; x++) {
-    const waveY = wy + Math.sin(x / (S * 0.06)) * 4 * sc;
-    fillCircleAA(x, waveY, 3 * sc, 100, 160, 255);
+  // Wing body polygon: crescent between leading arc and trailing line
+  // Leading arc: wide ellipse top half  (rx=200, ry=80)
+  const rx = 200 * sc, ry = 90 * sc;
+  const N = 60;
+  const leadingEdge = [];
+  for (let i = 0; i <= N; i++) {
+    const angle = Math.PI + (Math.PI * i / N); // π to 2π (bottom half of ellipse = top of icon)
+    leadingEdge.push([cx + rx * Math.cos(angle), wingCY + ry * Math.sin(angle)]);
   }
-  const wy2 = wy + 0.05 * S;
-  for (let x = 0.1 * S; x < 0.9 * S; x++) {
-    const waveY = wy2 + Math.sin(x / (S * 0.05) + 1) * 4 * sc;
-    fillCircleAA(x, waveY, 3 * sc, 100, 160, 255);
+  // Trailing edge: slight downward curve
+  const trailingEdge = [];
+  for (let i = N; i >= 0; i--) {
+    const t = i / N; // 1→0
+    const ex = cx + rx * Math.cos(Math.PI + Math.PI * (N-i) / N);
+    const ey = wingCY + 28 * sc + Math.sin(Math.PI * t) * 18 * sc;
+    trailingEdge.push([ex, ey]);
+  }
+  const wingBody = [...leadingEdge, ...trailingEdge];
+  // Fill wing body in white
+  fillPolygon(wingBody, 240, 245, 255);
+
+  // Leading edge tube (thick arc) — slightly darker
+  drawThickCurve(leadingEdge, 18 * sc, 180, 200, 255);
+
+  // Center strut (handle bar connecting wing center downward)
+  const strutTop = [cx, wingCY + 5 * sc];
+  const strutBot = [cx, wingCY + 90 * sc];
+  drawThickCurve([strutTop, strutBot], 8 * sc, 200, 215, 255);
+
+  // Wing tip accents (small circles at tips)
+  fillCircleAA(cx - rx, wingCY, 12 * sc, 200, 215, 255);
+  fillCircleAA(cx + rx, wingCY, 12 * sc, 200, 215, 255);
+
+  // ── WIND LINES ───────────────────────────────────────────────────
+  // Three horizontal lines below the wing, with arrow tips, suggesting wind
+  const windY = [wingCY + 125*sc, wingCY + 158*sc, wingCY + 191*sc];
+  const windLengths = [0.62, 0.50, 0.38]; // fraction of S
+  const wc = [100, 160, 255]; // wind line color
+
+  for (let i = 0; i < 3; i++) {
+    const wy = windY[i];
+    const wlen = windLengths[i] * S;
+    const wx0 = cx - wlen / 2;
+    const wx1 = cx + wlen / 2;
+    // Line
+    drawThickCurve([[wx0, wy], [wx1, wy]], 5 * sc, ...wc);
+    // Arrow head
+    const ah = 10 * sc;
+    drawThickCurve([[wx1 - ah, wy - ah*0.7], [wx1, wy], [wx1 - ah, wy + ah*0.7]], 5 * sc, ...wc);
   }
 
   return Buffer.from(rgba);

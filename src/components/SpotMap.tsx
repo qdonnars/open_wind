@@ -112,9 +112,10 @@ export function SpotMap({
   const setPendingEditRef = useRef(setPendingEdit);
   setPendingEditRef.current = setPendingEdit;
 
-  // Shared press timer (used by both map long-press and marker long-press)
   const pressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cancelPressRef = useRef<() => void>(() => {});
+  // Maps each marker's SVG element → its spot (for native long-press detection)
+  const elementToSpotRef = useRef<Map<Element, Spot>>(new Map());
 
   // Init map once
   useEffect(() => {
@@ -155,11 +156,25 @@ export function SpotMap({
       if (e.pointerType === "mouse" && e.button !== 0) return;
       activePointers++;
       if (activePointers > 1) { cancelPress(); return; }
-      // If pressing on a marker (SVG circle), let the marker handler take over
-      const tag = (e.target as Element).tagName.toLowerCase();
-      if (tag === "circle" || tag === "path") return;
+
       startX = e.clientX;
       startY = e.clientY;
+      const target = e.target as Element;
+
+      // Check if pressing on a known custom marker
+      const editSpot = elementToSpotRef.current.get(target);
+      if (editSpot) {
+        pressTimerRef.current = setTimeout(() => {
+          setPendingEditRef.current(editSpot);
+        }, 800);
+        return;
+      }
+
+      // If pressing on any other SVG marker (non-custom), just skip
+      const tag = target.tagName.toLowerCase();
+      if (tag === "circle" || tag === "path") return;
+
+      // Press on the map background → add new spot
       pressTimerRef.current = setTimeout(async () => {
         const rect = el.getBoundingClientRect();
         const point = L.point(startX - rect.left, startY - rect.top);
@@ -208,12 +223,8 @@ export function SpotMap({
         .on("click", () => onSelectRef.current(spot))
         .addTo(map);
       if (isCustom) {
-        marker.on("mousedown", () => {
-          cancelPressRef.current();
-          pressTimerRef.current = setTimeout(() => {
-            setPendingEditRef.current(spot);
-          }, 800);
-        });
+        const svgEl = (marker as any)._path as Element | undefined;
+        if (svgEl) elementToSpotRef.current.set(svgEl, spot);
       }
       markersRef.current.set(key, marker);
     }
@@ -241,6 +252,8 @@ export function SpotMap({
     // Remove old markers
     for (const [key, marker] of markersRef.current) {
       if (!desiredKeys.has(key)) {
+        const svgEl = (marker as any)._path as Element | undefined;
+        if (svgEl) elementToSpotRef.current.delete(svgEl);
         marker.remove();
         markersRef.current.delete(key);
       }
@@ -276,12 +289,8 @@ export function SpotMap({
           .on("click", () => onSelectRef.current(s))
           .addTo(map);
         if (isCustom) {
-          marker.on("mousedown", () => {
-            cancelPressRef.current();
-            pressTimerRef.current = setTimeout(() => {
-              setPendingEditRef.current(s);
-            }, 800);
-          });
+          const svgEl = (marker as any)._path as Element | undefined;
+          if (svgEl) elementToSpotRef.current.set(svgEl, s);
         }
         markersRef.current.set(key, marker);
       } else {
